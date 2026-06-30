@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title> Análise Financeira - Cobranças</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <script Psrc="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="header-filters">
+  <div class="logo-title">
+    <h1>Dashboard Financeiro - Receitas Unificadas</h1>
+    <span>Motos, Seminovos e Vendas/Expansão &bull; LocaGora</span>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  </div>
+  <div class="filters">
+    <input type="file" id="upload-excel" accept=".xlsx, .xls" style="display:none;" onchange="importarExcelReal(this)">
+    <button class="btn-pdf" style="background:#16a34a; margin-right:8px;" onclick="document.getElementById('upload-excel').click()">📊 Importar Planilha Excel</button>
+
+    <select class="filter-select" id="global-period-select">
+      <option value="Todos">[Período Global]</option>
+    </select>
+    <button class="btn-pdf" onclick="window.print()">Exportar PDF</button>
+  </div>
+</div>
+
+<div class="consolidated-banner">
+  <div class="banner-title">Resumo Consolidado Total (Todas as Operações)</div>
+  <div class="kpi-container">
+    <div class="kpi-card-main">
+      <div class="label">Faturamento Geral</div>
+      <div class="value" id="kpi-fat-geral">R$ 0,00</div>
+    </div>
+    <div class="kpi-card-main">
+      <div class="label">Bruto Consolidado</div>
+      <div class="value" id="kpi-bruto-conso">R$ 0,00</div>
+    </div>
+    <div class="kpi-card-main">
+      <div class="label">Faturamento Líquido</div>
+      <div class="value" id="kpi-liq-conso">R$ 0,00</div>
+      <div class="subtext" id="kpi-subtext-liq">0% do bruto</div>
+    </div>
+    <div class="kpi-card-main">
+      <div class="label">Inadimplência Geral</div>
+      <div class="value" id="kpi-inad-geral" style="color: #fca5a5;">0.0 %</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+
+  <input type="radio" name="tabs" id="tabone" checked="checked">
+  <label for="tabone">1. Locagora Aluguel de Motos</label>
+  <div class="tab-content">
+
+    <div class="local-filters-bar">
+      <div class="local-filters-group">
+        <label>Filtros da Operação:</label>
+        <select class="filter-select" id="motos-unidade-select">
+          <option value="Todas">Filtrar por Unidade Master (Todas)</option>
+        </select>
+        <select class="filter-select" id="motos-periodo-select">
+          <option value="Todos">Data Início e Fim (Motos)</option>
+        </select>
+
+        <select class="filter-select" id="motos-taxa-select" style="border: 1px solid #1e3a8a; font-weight: bold; color: #1e3a8a;">
+          <option value="todas">📊 Todas as Taxas Somadas</option>
+          <option value="royalties">💰 Royalties</option>
+          <option value="splits">✂️ Royalties (Splits)</option>
+          <option value="gestao">🏢 Gestão de Frotas/Espaço</option>
+          <option value="mkt">📣 Fundo de Marketing</option>
+        </select>
+      </div>
+      <button class="btn-extract" onclick="exportTableToCSV('table-motos', 'Relatorio_Aluguel_Motos')">🗂️ Extrair Relatório</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="block-card">
+        <div class="block-card-title">Fluxo de Caixa Taxas <span id="motos-p-recebido">0% recebido</span></div>
+        <div class="metric-row"><span class="lbl">Receita Bruta Recebida</span><span class="val green" id="motos-rec-bruta">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Receita Líquida</span><span class="val green" id="motos-rec-liquida">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Valor Emitidos Boletos</span><span class="val" id="motos-emitidos">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Valores em Aberto</span><span class="val red" id="motos-em-aberto">R$ 0,00</span></div>
+
+        <hr style="border:0; border-top: 1px dashed #cbd5e1; margin: 12px 0;">
+        <div class="block-card-title" style="border:none; font-size:12px; margin-bottom:8px;">Volumetria de Boletos (Total)</div>
+        <div class="metric-row"><span class="lbl">Quantidade de Boletos Emitidos</span><span class="val" id="motos-qtd-emitidos">0 un</span></div>
+        <div class="metric-row"><span class="lbl">Quantidade de Boletos Recebidos</span><span class="val green" id="motos-qtd-recebidos">0 un</span></div>
+
+        <div style="margin-top:15px; height:140px; position:relative;">
+          <canvas id="chart-motos-fluxo"></canvas>
+        </div>
+      </div>
+
+      <div class="block-card">
+        <div class="block-card-title">Detalhamento Individual de Taxas Corporativas</div>
+        <table class="tax-mini-table" id="table-mini-taxas">
+          <thead>
+            <tr>
+              <th>Tipo de Taxa</th>
+              <th>Valor Emitido</th>
+              <th>Valor Recebido</th>
+              <th>Inadimplência</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Royalties</strong></td>
+              <td id="tax-roy-emit">R$ 0,00</td>
+              <td id="tax-roy-rec">R$ 0,00</td>
+              <td class="val red" id="tax-roy-inad">0.0 %</td>
+            </tr>
+            <tr>
+              <td><strong>Royalties (Splits)</strong></td>
+              <td id="tax-split-emit">R$ 0,00</td>
+              <td id="tax-split-rec">R$ 0,00</td>
+              <td class="val red" id="tax-split-inad">0.0 %</td>
+            </tr>
+            <tr>
+              <td><strong>Gestão de Frotas/Espaço</strong></td>
+              <td id="tax-gestao-emit">R$ 0,00</td>
+              <td id="tax-gestao-rec">R$ 0,00</td>
+              <td class="val red" id="tax-gestao-inad">0.0 %</td>
+            </tr>
+            <tr>
+              <td><strong>Fundo de Marketing</strong></td>
+              <td id="tax-mkt-emit">R$ 0,00</td>
+              <td id="tax-mkt-rec">R$ 0,00</td>
+              <td class="val red" id="tax-mkt-inad">0.0 %</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top:10px; height:140px; position:relative;">
+          <canvas id="chart-motos-taxas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-title">Performance Individualizada de Franquias (Unidades Master)</div>
+      <table class="data-table" id="table-motos">
+        <thead>
+          <tr>
+            <th>Nome da Franquia / Master</th>
+            <th>Vendas (Qtd)</th>
+            <th>Taxas Brutas Emitidas</th>
+            <th>Faturamento Líquido (Recebido)</th>
+            <th>Diferença / Em Aberto</th>
+            <th style="text-align: center;">Situação Cadastral</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6" style="text-align:center; color:#64748b; padding: 20px;">Aguardando a importação de uma planilha Excel real...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <input type="radio" name="tabs" id="tabtwo">
+  <label for="tabtwo">2. Locagora Seminovos</label>
+  <div class="tab-content">
+
+    <div class="local-filters-bar">
+      <div class="local-filters-group">
+        <label>Filtros da Operação:</label>
+        <select class="filter-select" id="semi-unidade-select">
+          <option value="Todas">Filtrar por Unidade Seminovos (Todas)</option>
+        </select>
+        <select class="filter-select" id="semi-periodo-select">
+          <option value="Todos">Período de Venda (Mensal)</option>
+        </select>
+      </div>
+      <button class="btn-extract" onclick="exportTableToCSV('table-seminovos', 'Relatorio_Seminovos')">🗂️ Extrair Relatório</button>
+    </div>
+
+    <div class="grid-3">
+      <div class="block-card">
+        <div class="block-card-title">Resultado de Vendas</div>
+        <div class="metric-row"><span class="lbl">Faturamento Bruto Vendas</span><span class="val green" id="semi-fat-bruto">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Valor Boletos Emitidos (Mês)</span><span class="val" id="semi-boletos-mes">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Recebimentos Realizados</span><span class="val green" id="semi-recebidos">R$ 0,00</span></div>
+
+        <div class="metric-row" style="background:#f0fdf4; padding:6px; border-radius:6px; margin-top:10px; border:1px dashed #16a34a;">
+          <span class="lbl" style="font-weight:bold; color:#16a34a;">Qtd. de Motos Vendidas</span>
+          <span class="val green" style="font-size:14px;" id="semi-qtd-motos">0 un</span>
+        </div>
+
+        <div style="margin-top:10px; height:110px; position:relative;">
+          <canvas id="chart-semi-vendas"></canvas>
+        </div>
+      </div>
+
+      <div class="block-card" style="border-left: 4px solid #2563eb;">
+        <div class="block-card-title" style="color:#2563eb;">Carteira de Parcelados</div>
+        <div class="metric-row"><span class="lbl">Boletos / Parcelas Futuras</span><span class="val blue" id="semi-futuras">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Status da Carteira</span><span class="val blue">A Receber</span></div>
+        <div style="font-size: 11px; color:#64748b; margin-top:12px; font-style: italic; line-height:14px;">
+          *Valores futuros documentados que vencem nos meses subsequentes e estruturalmente NÃO impactam nem elevam a inadimplência líquida atual.
+        </div>
+
+        <div style="margin-top:10px; height:110px; position:relative;">
+          <canvas id="chart-semi-carteira"></canvas>
+        </div>
+      </div>
+
+      <div class="block-card">
+        <div class="block-card-title">Risco e Perdas (Vencidos)</div>
+        <div class="metric-row"><span class="lbl">Valores Vencidos em Aberto</span><span class="val red" id="semi-vencidos">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Índice de Inadimplência</span><span class="val red" id="semi-inad-pct">0.0 %</span></div>
+
+        <div style="margin-top:40px; height:110px; position:relative;">
+          <canvas id="chart-semi-risco"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-title">Performance Histórica e Evolution Mensal de Contratos</div>
+      <table class="data-table" id="table-seminovos">
+        <thead>
+          <tr>
+            <th>Ponto / Unidade Seminovos</th>
+            <th>Período de Venda</th>
+            <th>Motos Vendidas (Qtd)</th>
+            <th>Fat. Bruto Mensal</th>
+            <th>Valor Boletos Mês</th>
+            <th>Parcelas Futuras Planificadas</th>
+            <th>Inadimplência Real</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="7" style="text-align:center; color:#64748b; padding: 20px;">Aguardando a importação de uma planilha Excel real...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <input type="radio" name="tabs" id="tabthree">
+  <label for="tabthree">3. Expansão (Franquias e Motos)</label>
+  <div class="tab-content">
+
+    <div class="local-filters-bar">
+      <div class="local-filters-group">
+        <label>Filtros da Operação:</label>
+        <select class="filter-select" id="exp-regiao-select">
+          <option value="Todos">Filtrar por Supervisor / Região (Todos)</option>
+        </select>
+        <select class="filter-select" id="exp-periodo-select">
+          <option value="Todos">Funil de Vendas Expansão</option>
+        </select>
+      </div>
+      <button class="btn-extract" onclick="exportTableToCSV('table-expansao', 'Relatorio_Expansao_Franquias')">🗂️ Extrair Relatório</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="block-card" style="border-top-color: #8b5cf6;">
+        <div class="block-card-title">Vendas de Franquias</div>
+        <div class="metric-row"><span class="lbl">Faturamento Bruto Tx. Franquia</span><span class="val" id="exp-fran-bruto">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Taxas de Franquia Pagas</span><span class="val green" id="exp-fran-pagas">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Taxas de Franquia em Aberto</span><span class="val red" id="exp-fran-aberto">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Inadimplência Expansão</span><span class="val red" id="exp-fran-inad">0.0 %</span></div>
+
+        <div style="margin-top:15px; height:120px; position:relative;">
+          <canvas id="chart-exp-franquias"></canvas>
+        </div>
+      </div>
+      <div class="block-card" style="border-top-color: #ec4899;">
+        <div class="block-card-title">Venda e Intermediação de Motos</div>
+        <div class="metric-row"><span class="lbl">Faturamento Bruto Tx. Motos</span><span class="val" id="exp-motos-bruto">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Motos Pagas</span><span class="val green" id="exp-motos-pagas">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Motos em Aberto</span><span class="val red" id="exp-motos-aberto">R$ 0,00</span></div>
+        <div class="metric-row"><span class="lbl">Inadimplência Venda Ativos</span><span class="val red" id="exp-motos-inad">0.0 %</span></div>
+
+        <div style="margin-top:15px; height:120px; position:relative;">
+          <canvas id="chart-exp-motos"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-title">Performance Individualizada de Franquias / Franqueados</div>
+      <table class="data-table" id="table-expansao">
+        <thead>
+          <tr>
+            <th>Franqueado's / Contratos</th>
+            <th>Situação Cadastral</th>
+            <th>Boletos Emitidos</th>
+            <th>Boletos Recebidos</th>
+            <th>Valores Líquidos</th>
+            <th>Inadimplência Líquida</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6" style="text-align:center; color:#64748b; padding: 20px;">Aguardando a importação de uma planilha Excel real...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+    <script  src="./script.js"></script>
+
+  </body>
+  
+</html>
