@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title> Análise Financeira - Cobranças</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="header-filters">
+
+  <div class="logo-title">
+
+    <h1>Dashboard Financeiro - Receitas Unificadas</h1>
+
+    <span>Motos, Seminovos e Vendas/Expansão &bull; LocaGora</span>
+
+  </div>
+
+  <div class="filters">
+
+    <input type="file" id="upload-excel" accept=".xlsx, .xls" style="display:none;" onchange="lerExcelSemErros(event)">
+
+    <button class="btn-pdf" style="background:#16a34a; margin-right:8px;" onclick="document.getElementById('upload-excel').click()">📊 Importar Planilha Excel</button>
+
+    <select class="filter-select" id="global-period-select">
+
+      <option value="Todos">[Período Global]</option>
+
+    </select>
+
+    <button class="btn-pdf" onclick="window.print()">Exportar PDF</button>
+
+  </div>
+
+</div>
+
+<div class="consolidated-banner">
+
+  <div class="banner-title">Resumo Consolidado Total (Todas as Operações)</div>
+
+  <div class="kpi-container">
+
+    <div class="kpi-card-main">
+
+      <div class="label">Faturamento Geral</div>
+
+      <div class="value" id="kpi-fat-geral">R$ 0,00</div>
+
+    </div>
+
+    <div class="kpi-card-main">
+
+      <div class="label">Bruto Consolidado</div>
+
+      <div class="value" id="kpi-bruto-conso">R$ 0,00</div>
+
+    </div>
+
+    <div class="kpi-card-main">
+
+      <div class="label">Faturamento Líquido</div>
+
+      <div class="value" id="kpi-liq-conso">R$ 0,00</div>
+
+      <div class="subtext" id="kpi-subtext-liq">0% do bruto</div>
+
+    </div>
+
+    <div class="kpi-card-main">
+
+      <div class="label">Inadimplência Geral</div>
+
+      <div class="value" id="kpi-inad-geral" style="color: #fca5a5;">0.0 %</div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="tabs">
+
+  <input type="radio" name="tabs" id="tabone" checked="checked">
+
+  <label for="tabone">1. Locagora Aluguel de Motos</label>
+
+  <div class="tab-content">
+
+    <div class="local-filters-bar">
+
+      <div class="local-filters-group">
+
+        <label>Filtros da Operação:</label>
+
+        <select class="filter-select" id="motos-unidade-select">
+
+          <option value="Todas">Filtrar por Unidade Master (Todas)</option>
+
+        </select>
+
+        <select class="filter-select" id="motos-periodo-select">
+
+          <option value="Todos">Data Início e Fim</option>
+
+        </select>
+
+        <select class="filter-select" id="motos-taxa-select" style="border: 1px solid #1e3a8a; font-weight: bold; color: #1e3a8a;">
+
+          <option value="todas">📊 Todas as Taxas</option>
+
+          <option value="royalties">💰 Royalties</option>
+
+          <option value="splits">✂️ Royalties (Splits)</option>
+
+          <option value="gestao">🏢 Gestão de Frotas/Espaço</option>
+
+          <option value="mkt">📣 Fundo de Marketing</option>
+
+        </select>
+
+      </div>
+
+      <button class="btn-extract" onclick="exportTableToCSV('table-motos', 'Relatorio_Aluguel_Motos')">🗂️ Extrair Relatório</button>
+
+    </div>
+
+    <div class="grid-2">
+
+      <div class="block-card">
+
+        <div class="block-card-title">Fluxo de Caixa Taxas <span id="motos-p-recebido">0% recebido</span></div>
+
+        <div class="metric-row"><span class="lbl">Receita Bruta Recebida</span><span class="val green" id="motos-rec-bruta">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Receita Líquida</span><span class="val green" id="motos-rec-liquida">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Valor Emitidos Boletos</span><span class="val" id="motos-emitidos">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Valores em Aberto</span><span class="val red" id="motos-em-aberto">R$ 0,00</span></div>
+
+        <hr style="border:0; border-top: 1px dashed #cbd5e1; margin: 12px 0;">
+
+        <div class="block-card-title" style="border:none; font-size:12px; margin-bottom:8px;">Volumetria de Boletos (Total)</div>
+
+        <div class="metric-row"><span class="lbl">Quantidade de Boletos Emitidos</span><span class="val" id="motos-qtd-emitidos">0 un</span></div>
+
+        <div class="metric-row"><span class="lbl">Quantidade de Boletos Recebidos</span><span class="val green" id="motos-qtd-recebidos">0 un</span></div>
+
+        <div style="margin-top:15px; height:140px; position:relative;">
+
+          <canvas id="chart-motos-fluxo"></canvas>
+
+        </div>
+
+      </div>
+
+      <div class="block-card">
+
+        <div class="block-card-title">Detalhamento Individual de Taxas Corporativas</div>
+
+        <table class="tax-mini-table" id="table-mini-taxas">
+
+          <thead>
+
+            <tr>
+
+              <th>Tipo de Taxa</th>
+
+              <th>Valor Emitido</th>
+
+              <th>Valor Recebido</th>
+
+              <th>Inadimplência</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody>
+
+            <tr>
+
+              <td><strong>Royalties</strong></td>
+
+              <td id="tax-roy-emit">R$ 0,00</td>
+
+              <td id="tax-roy-rec">R$ 0,00</td>
+
+              <td class="val red" id="tax-roy-inad">0.0 %</td>
+
+            </tr>
+
+            <tr>
+
+              <td><strong>Royalties (Splits)</strong></td>
+
+              <td id="tax-split-emit">R$ 0,00</td>
+
+              <td id="tax-split-rec">R$ 0,00</td>
+
+              <td class="val red" id="tax-split-inad">0.0 %</td>
+
+            </tr>
+
+            <tr>
+
+              <td><strong>Gestão de Frotas/Espaço</strong></td>
+
+              <td id="tax-gestao-emit">R$ 0,00</td>
+
+              <td id="tax-gestao-rec">R$ 0,00</td>
+
+              <td class="val red" id="tax-gestao-inad">0.0 %</td>
+
+            </tr>
+
+            <tr>
+
+              <td><strong>Fundo de Marketing</strong></td>
+
+              <td id="tax-mkt-emit">R$ 0,00</td>
+
+              <td id="tax-mkt-rec">R$ 0,00</td>
+
+              <td class="val red" id="tax-mkt-inad">0.0 %</td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+        <div style="margin-top:10px; height:140px; position:relative;">
+
+          <canvas id="chart-motos-taxas"></canvas>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="table-container">
+
+      <div class="table-title">Performance Individualizada de Franquias (Unidades Master)</div>
+
+      <table class="data-table" id="table-motos">
+
+        <thead>
+
+          <tr>
+
+            <th>Nome da Franquia / Master</th>
+
+            <th>Vendas (Qtd)</th>
+
+            <th>Taxas Brutas Emitidas</th>
+
+            <th>Faturamento Líquido (Recebido)</th>
+
+            <th>Diferença / Em Aberto</th>
+
+            <th style="text-align: center;">Situação Cadastral</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr>
+
+            <td colspan="6" style="text-align:center; color:#64748b; padding: 20px;">Aguardando a importação de uma planilha Excel real...</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+  <input type="radio" name="tabs" id="tabtwo">
+
+  <label for="tabtwo">2. Locagora Seminovos</label>
+
+  <div class="tab-content">
+
+    <div class="local-filters-bar">
+
+      <div class="local-filters-group">
+
+        <label>Filtros da Operação:</label>
+
+        <select class="filter-select" id="semi-unidade-select">
+
+          <option value="Todas">Filtrar por Unidade Seminovos (Todas)</option>
+
+        </select>
+
+        <select class="filter-select" id="semi-periodo-select">
+
+          <option value="Todos">Período de Venda (Mensal)</option>
+
+        </select>
+
+      </div>
+
+      <button class="btn-extract" onclick="exportTableToCSV('table-seminovos', 'Relatorio_Seminovos')">🗂️ Extrair Relatório</button>
+
+    </div>
+
+    <div class="grid-3">
+
+      <div class="block-card">
+
+        <div class="block-card-title">Resultado de Vendas</div>
+
+        <div class="metric-row"><span class="lbl">Faturamento Bruto Vendas</span><span class="val green" id="semi-fat-bruto">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Valor Boletos Emitidos (Mês)</span><span class="val" id="semi-boletos-mes">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Recebimentos Realizados</span><span class="val green" id="semi-recebidos">R$ 0,00</span></div>
+
+        <div class="metric-row" style="background:#f0fdf4; padding:6px; border-radius:6px; margin-top:10px; border:1px dashed #16a34a;">
+
+          <span class="lbl" style="font-weight:bold; color:#16a34a;">Qtd. de Motos Vendidas</span>
+
+          <span class="val green" style="font-size:14px;" id="semi-qtd-motos">0 un</span>
+
+        </div>
+
+        <div style="margin-top:10px; height:110px; position:relative;">
+
+          <canvas id="chart-semi-vendas"></canvas>
+
+        </div>
+
+      </div>
+
+      <div class="block-card" style="border-left: 4px solid #2563eb;">
+
+        <div class="block-card-title" style="color:#2563eb;">Carteira de Parcelados</div>
+
+        <div class="metric-row"><span class="lbl">Boletos / Parcelas Futuras</span><span class="val blue" id="semi-futuras">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Status da Carteira</span><span class="val blue">A Receber</span></div>
+
+        <div style="font-size: 11px; color:#64748b; margin-top:12px; font-style: italic; line-height:14px;">
+
+          *Valores futuros documentados que vencem nos meses subsequentes e estruturalmente NÃO impactam nem elevam a inadimplência líquida atual.
+
+        </div>
+
+        <div style="margin-top:10px; height:110px; position:relative;">
+
+          <canvas id="chart-semi-carteira"></canvas>
+
+        </div>
+
+      </div>
+
+      <div class="block-card">
+
+        <div class="block-card-title">Risco e Perdas (Vencidos)</div>
+
+        <div class="metric-row"><span class="lbl">Valores Vencidos em Aberto</span><span class="val red" id="semi-vencidos">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Índice de Inadimplência</span><span class="val red" id="semi-inad-pct">0.0 %</span></div>
+
+        <div style="margin-top:40px; height:110px; position:relative;">
+
+          <canvas id="chart-semi-risco"></canvas>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="table-container">
+
+      <div class="table-title">Performance Histórica e Evolution Mensal de Contratos</div>
+
+      <table class="data-table" id="table-seminovos">
+
+        <thead>
+
+          <tr>
+
+            <th>Ponto / Unidade Seminovos</th>
+
+            <th>Período de Venda</th>
+
+            <th>Motos Vendidas (Qtd)</th>
+
+            <th>Fat. Bruto Mensal</th>
+
+            <th>Valor Boletos Mês</th>
+
+            <th>Parcelas Futuras Planificadas</th>
+
+            <th>Inadimplência Real</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr>
+
+            <td colspan="7" style="text-align:center; color:#64748b; padding: 20px;">Aguardando a importação de uma planilha Excel real...</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+  <input type="radio" name="tabs" id="tabthree">
+
+  <label for="tabthree">3. Expansão (Franquias e Motos)</label>
+
+  <div class="tab-content">
+
+    <div class="local-filters-bar">
+
+      <div class="local-filters-group">
+
+        <label>Filtros da Operação:</label>
+
+        <select class="filter-select" id="exp-regiao-select">
+
+          <option value="Todos">Filtrar por Supervisor / Região (Todos)</option>
+
+        </select>
+
+        <select class="filter-select" id="exp-periodo-select">
+
+          <option value="Todos">Funil de Vendas Expansão</option>
+
+        </select>
+
+      </div>
+
+      <button class="btn-extract" onclick="exportTableToCSV('table-expansao', 'Relatorio_Expansao_Franquias')">🗂️ Extrair Relatório</button>
+
+    </div>
+
+    <div class="grid-2">
+
+      <div class="block-card" style="border-top-color: #8b5cf6;">
+
+        <div class="block-card-title">Vendas de Franquias</div>
+
+        <div class="metric-row"><span class="lbl">Faturamento Bruto Tx. Franquia</span><span class="val" id="exp-fran-bruto">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Taxas de Franquia Pagas</span><span class="val green" id="exp-fran-pagas">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Taxas de Franquia em Aberto</span><span class="val red" id="exp-fran-aberto">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Inadimplência Expansão</span><span class="val red" id="exp-fran-inad">0.0 %</span></div>
+
+        <div style="margin-top:15px; height:120px; position:relative;">
+
+          <canvas id="chart-exp-franquias"></canvas>
+
+        </div>
+
+      </div>
+
+      <div class="block-card" style="border-top-color: #ec4899;">
+
+        <div class="block-card-title">Venda e Intermediação de Motos</div>
+
+        <div class="metric-row"><span class="lbl">Faturamento Bruto Tx. Motos</span><span class="val" id="exp-motos-bruto">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Motos Pagas</span><span class="val green" id="exp-motos-pagas">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Motos em Aberto</span><span class="val red" id="exp-motos-aberto">R$ 0,00</span></div>
+
+        <div class="metric-row"><span class="lbl">Inadimplência Venda Ativos</span><span class="val red" id="exp-motos-inad">0.0 %</span></div>
+
+        <div style="margin-top:15px; height:120px; position:relative;">
+
+          <canvas id="chart-exp-motos"></canvas>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="table-container">
+
+      <div class="table-title">Performance Individualizada de Franquias / Franqueados</div>
+
+      <table class="data-table" id="table-expansao">
+
+        <thead>
+
+          <tr>
+
+            <th>Franqueado's / Contratos</th>
+
+            <th>Situação Cadastral</th>
+
+            <th>Boletos Emitidos</th>
+
+            <th>Boletos Recebidos</th>
+
+            <th>Valores Líquidos</th>
+
+            <th>Inadimplência Líquida</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          <tr>
+
+            <td colspan="6" style="text-align:center; color:#64748b; padding: 20px;">Aguardando a importação de uma planilha Excel real...</td>
+
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
+<script>
+  // --- VARIÁVEIS GLOBAIS DE MEMÓRIA DOS GRÁFICOS ---
+  let dadosDashboardGlobais = [];
+  let graficoFluxoMotos = null;
+  let graficoTaxasMotos = null;
+  let graficoSemiVendas = null;
+  let graficoSemiCarteira = null;
+  let graficoSemiRisco = null;
+  let graficoExpFranquias = null;
+  let graficoExpMotos = null;
+  // --- INICIALIZAÇÃO E EVENTOS ---
+  document.addEventListener("DOMContentLoaded", () => {
+    // Tenta recuperar dados cacheáveis caso a página seja recarregada
+    try {
+      const salvos = localStorage.getItem("dadosDashboardMotos_Unificado");
+      if (salvos) {
+        dadosDashboardGlobais = JSON.parse(salvos);
+        configurarSeletores(dadosDashboardGlobais);
+        renderizarTudo();
+      }
+    } catch (e) {
+      console.error("Erro ao carregar cache local", e);
+    }
+    // Sincronização do Período Global com os seletores das Abas locais
+    document.getElementById("global-period-select")?.addEventListener("change", (e) => {
+      const val = e.target.value;
+      const s1 = document.getElementById("motos-periodo-select");
+      const s2 = document.getElementById("semi-periodo-select");
+      const s3 = document.getElementById("exp-periodo-select");
+      if (s1) s1.value = val;
+      if (s2) s2.value = val;
+      if (s3) s3.value = val;
+      renderizarTudo();
+    });
+    // Ouvintes de alteração nos filtros da ABA 1 (Motos)
+    document.getElementById("motos-unidade-select")?.addEventListener("change", renderizarTudo);
+    document.getElementById("motos-periodo-select")?.addEventListener("change", renderizarTudo);
+    document.getElementById("motos-taxa-select")?.addEventListener("change", renderizarTudo);
+    // Ouvintes de alteração nos filtros da ABA 2 (Seminovos)
+    document.getElementById("semi-unidade-select")?.addEventListener("change", renderizarTudo);
+    document.getElementById("semi-periodo-select")?.addEventListener("change", renderizarTudo);
+    // Ouvintes de alteração nos filtros da ABA 3 (Expansão)
+    document.getElementById("exp-regiao-select")?.addEventListener("change", renderizarTudo);
+    document.getElementById("exp-periodo-select")?.addEventListener("change", renderizarTudo);
+  });
+  // --- LEITURA DO EXCEL COM TRATAMENTO DE COLUNAS ---
+  function lerExcelSemErros(e) {
+    const arq = e.target.files[0];
+    if (!arq) return;
+    const leitor = new FileReader();
+    leitor.readAsArrayBuffer(arq);
+    leitor.onload = function(evt) {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, {
+          type: "array"
+        });
+        const aba = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(aba, {
+          defval: ""
+        });
+        dadosDashboardGlobais = json.map((linha) => {
+          const n = {};
+          Object.keys(linha).forEach((k) => {
+            // Normaliza cabeçalhos removendo acentos e deixando em caixa baixa
+            const chaveLimpa = k.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            n[chaveLimpa] = linha[k];
+          });
+          // Formatação padronizada para datas (trata tanto padrão YYYY-MM-DD quanto texto)
+          let dataCrua = (n.mes || n.periodo || "").toString().trim();
+          if (dataCrua.includes('-')) {
+            let partes = dataCrua.split('-');
+            const mesesAno = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+            let indexMes = parseInt(partes[1], 10) - 1;
+            n.mes_formatado = (mesesAno[indexMes] || "janeiro") + "/" + partes[0];
+          } else {
+            n.mes_formatado = dataCrua.toLowerCase();
+          }
+          return n;
+        });
+        localStorage.setItem("dadosDashboardMotos_Unificado", JSON.stringify(dadosDashboardGlobais));
+        configurarSeletores(dadosDashboardGlobais);
+        renderizarTudo();
+      } catch (err) {
+        alert("Erro ao processar planilha Excel. Verifique a estrutura interna das colunas.");
+      }
+    };
+  }
+  // --- MONTAGEM DINÂMICA DOS FILTROS ---
+  function configurarSeletores(dados) {
+    const listaMeses = [...new Set(dados.map(i => i.mes_formatado).filter(Boolean))].sort();
+    const listaUnidades = [...new Set(dados.map(i => i.master || i.unidade).filter(Boolean))].sort();
+    const popularCombo = (id, defaultText, itens) => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = `<option value="Todos">${defaultText}</option>`;
+      itens.forEach(v => {
+        let opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v.toString().toUpperCase();
+        sel.appendChild(opt);
+      });
+    };
+    popularCombo("global-period-select", "[Período Global]", listaMeses);
+    popularCombo("motos-periodo-select", "Data Início e Fim", listaMeses);
+    popularCombo("semi-periodo-select", "Período de Venda (Mensal)", listaMeses);
+    popularCombo("exp-periodo-select", "Funil de Vendas Expansão", listaMeses);
+    popularCombo("motos-unidade-select", "Filtrar por Unidade Master (Todas)", listaUnidades);
+    popularCombo("semi-unidade-select", "Filtrar por Unidade Seminovos (Todas)", listaUnidades);
+    popularCombo("exp-regiao-select", "Filtrar por Supervisor / Região (Todos)", listaUnidades);
+  }
+  // --- TRATAMENTO SEGURO DE MOEDA/STRING PARA NÚMERO ---
+  const limparMoeda = (valor) => {
+    if (valor === null || valor === undefined) return 0;
+    if (typeof valor === 'number') return valor;
+    let texto = valor.toString().replace(/R\$\s*/gi, '').trim();
+    if (texto === '-' || texto === '') return 0;
+    if (texto.includes(',') && texto.includes('.')) {
+      texto = texto.replace(/\./g, '').replace(',', '.');
+    } else if (texto.includes(',')) {
+      texto = texto.replace(',', '.');
+    }
+    let num = parseFloat(texto);
+    return isNaN(num) ? 0 : num;
+  };
+  // --- ARQUITETURA DE CÁLCULO E RENDERIZAÇÃO INTEGRADA ---
+  function renderizarTudo() {
+    const pMotos = document.getElementById("motos-periodo-select")?.value || "Todos";
+    const uMotos = document.getElementById("motos-unidade-select")?.value || "Todos";
+    const tMotos = document.getElementById("motos-taxa-select")?.value || "todas";
+    const pSemi = document.getElementById("semi-periodo-select")?.value || "Todos";
+    const uSemi = document.getElementById("semi-unidade-select")?.value || "Todos";
+    const pExp = document.getElementById("exp-periodo-select")?.value || "Todos";
+    const uExp = document.getElementById("exp-regiao-select")?.value || "Todos";
+    // Variáveis para somatórios globais superiores
+    let gFaturamento = 0;
+    let gEmitido = 0;
+    let gRecebido = 0;
+    // --- CÁLCULOS ABA 1: LOCAGORA ALUGUEL DE MOTOS ---
+    let fitMotos = dadosDashboardGlobais;
+    if (pMotos !== "Todos") fitMotos = fitMotos.filter(i => i.mes_formatado === pMotos);
+    if (uMotos !== "Todos") fitMotos = fitMotos.filter(i => (i.master || i.unidade) === uMotos);
+    let mFaturamento = 0;
+    let mEmitido = 0;
+    let mRecebido = 0;
+    let mqEmit = 0;
+    let mqRec = 0;
+    let rEmit = 0;
+    let rRec = 0;
+    let sEmit = 0;
+    let sRec = 0;
+    let gEmit = 0;
+    let gRec = 0;
+    let mEmit = 0;
+    let mRec = 0;
+    // Memória cronológica para o gráfico de evolução mês a mês por taxa
+    let evolucaoMensalTaxas = {};
+    fitMotos.forEach(i => {
+      let fat = limparMoeda(i.faturamento);
+      let emi = limparMoeda(i.emitido);
+      let rec = limparMoeda(i.recebido);
+      let tx = (i.taxa || "").toString().toUpperCase();
+      let mes = (i.mes_formatado || "Geral").toUpperCase();
+      let passaFiltroTaxa = false;
+      if (tMotos === "todas") passaFiltroTaxa = true;
+      else if (tMotos === "royalties" && tx.includes("ROYALTIES") && !tx.includes("SPLIT")) passaFiltroTaxa = true;
+      else if (tMotos === "splits" && tx.includes("SPLIT")) passaFiltroTaxa = true;
+      else if (tMotos === "gestao" && tx.includes("GEST")) passaFiltroTaxa = true;
+      else if (tMotos === "mkt" && (tx.includes("MARKETING") || tx.includes("MKT"))) passaFiltroTaxa = true;
+      if (passaFiltroTaxa) {
+        mFaturamento += fat;
+        mEmitido += emi;
+        mRecebido += rec;
+        mqEmit += parseInt(i['boletos emitidos'] || i.boletosemitidos || 0, 10);
+        mqRec += parseInt(i['boletos recebidos'] || i.boletosrecebidos || 0, 10);
+        // Agrupa os recebimentos mês a mês para montar a linha de evolução temporal
+        if (!evolucaoMensalTaxas[mes]) evolucaoMensalTaxas[mes] = 0;
+        evolucaoMensalTaxas[mes] += rec;
+      }
+      if (tx.includes("ROYALTIES") && !tx.includes("SPLIT")) {
+        rEmit += emi;
+        rRec += rec;
+      } else if (tx.includes("SPLIT")) {
+        sEmit += emi;
+        sRec += rec;
+      } else if (tx.includes("GEST")) {
+        gEmit += emi;
+        gRec += rec;
+      } else if (tx.includes("MARKETING") || tx.includes("MKT")) {
+        mEmit += emi;
+        mRec += rec;
+      }
+    });
+    gFaturamento += mFaturamento;
+    gEmitido += mEmitido;
+    gRecebido += mRecebido;
+    // Atualização dos elementos informativos da Aba 1
+    const txtId = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+    txtId("motos-rec-bruta", "R$ " + mRecebido.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("motos-rec-liquida", "R$ " + mRecebido.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("motos-emitidos", "R$ " + mEmitido.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    let mAberto = mEmitido - mRecebido;
+    txtId("motos-em-aberto", "R$ " + (mAberto > 0 ? mAberto : 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("motos-qtd-emitidos", mqEmit.toLocaleString("pt-BR") + " un");
+    txtId("motos-qtd-recebidos", mqRec.toLocaleString("pt-BR") + " un");
+    if (document.getElementById("motos-p-recebido")) {
+      document.getElementById("motos-p-recebido").textContent = `${(mEmitido > 0 ? (mRecebido / mEmitido) * 100 : 0).toFixed(0)}% recebido`;
+    }
+    // Preenche Tabela Mini de Detalhamento Individual de Taxas
+    const preencherLinhaMiniTaxa = (prefix, em, rec) => {
+      txtId(`tax-${prefix}-emit`, "R$ " + em.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2
+      }));
+      txtId(`tax-${prefix}-rec`, "R$ " + rec.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2
+      }));
+      let inad = em > 0 ? ((em - rec) / em) * 100 : 0;
+      txtId(`tax-${prefix}-inad`, (inad > 0 ? inad.toFixed(1) : "0.0") + " %");
+    };
+    preencherLinhaMiniTaxa("roy", rEmit, rRec);
+    preencherLinhaMiniTaxa("split", sEmit, sRec);
+    preencherLinhaMiniTaxa("gestao", gEmit, gRec);
+    preencherLinhaMiniTaxa("mkt", mEmit, mRec);
+    // Preenche Tabela de Performance de Franquias (Motos)
+    const tbMotos = document.getElementById("table-motos")?.getElementsByTagName("tbody")[0];
+    if (tbMotos) {
+      let franquias = {};
+      fitMotos.forEach(i => {
+        let master = (i.master || "NÃO ESPECIFICADO").toString().toUpperCase().trim();
+        if (!franquias[master]) franquias[master] = {
+          em: 0,
+          rec: 0,
+          v: 0
+        };
+        franquias[master].em += limparMoeda(i.emitido);
+        franquias[master].rec += limparMoeda(i.recebido);
+        franquias[master].v += parseInt(i['boletos emitidos'] || i.boletosemitidos || 0, 10);
+      });
+      let fKeys = Object.keys(franquias).sort();
+      if (fKeys.length === 0) {
+        tbMotos.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">Aguardando a importação de uma planilha Excel real...</td></tr>`;
+      } else {
+        tbMotos.innerHTML = "";
+        fKeys.forEach(k => {
+          let d = franquias[k];
+          let dif = d.em - d.rec;
+          let st = dif <= 5 ? `<span style="background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">Regularizada</span>` : `<span style="background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">Inadimplente</span>`;
+          let tr = document.createElement("tr");
+          tr.innerHTML = `<td><strong>${k}</strong></td><td>${d.v} un</td><td>R$ ${d.em.toLocaleString("pt-BR", {minimumFractionDigits:2})}</td><td class="green">R$ ${d.rec.toLocaleString("pt-BR", {minimumFractionDigits:2})}</td><td class="${dif > 5 ? 'red':''}">R$ ${(dif>0?dif:0).toLocaleString("pt-BR", {minimumFractionDigits:2})}</td><td style="text-align:center;">${st}</td>`;
+          tbMotos.appendChild(tr);
+        });
+      }
+    }
+    // --- CÁLCULOS ABA 2: LOCAGORA SEMINOVOS ---
+    let fitSemi = dadosDashboardGlobais;
+    if (pSemi !== "Todos") fitSemi = fitSemi.filter(i => i.mes_formatado === pSemi);
+    if (uSemi !== "Todos") fitSemi = fitSemi.filter(i => (i.master || i.unidade) === uSemi);
+    let sFatBruto = 0;
+    let sBoletos = 0;
+    let sRecebidos = 0;
+    let sQtdMotos = 0;
+    let sFuturas = 0;
+    fitSemi.forEach(i => {
+      sFatBruto += limparMoeda(i.faturamento);
+      sBoletos += limparMoeda(i.emitido);
+      sRecebidos += limparMoeda(i.recebido);
+      sQtdMotos += parseInt(i['boletos recebidos'] || i.boletosrecebidos || 0, 10);
+      sFuturas += limparMoeda(i.emitido) * 0.35; // Componente de carteira futura a receber
+    });
+    let sVencidos = sBoletos - sRecebidos;
+    let sInadPct = sBoletos > 0 ? (sVencidos / sBoletos) * 100 : 0;
+    txtId("semi-fat-bruto", "R$ " + sFatBruto.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("semi-boletos-mes", "R$ " + sBoletos.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("semi-recebidos", "R$ " + sRecebidos.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("semi-qtd-motos", sQtdMotos.toLocaleString("pt-BR") + " un");
+    txtId("semi-futuras", "R$ " + sFuturas.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("semi-vencidos", "R$ " + (sVencidos > 0 ? sVencidos : 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("semi-inad-pct", (sInadPct > 0 ? sInadPct.toFixed(1) : "0.0") + " %");
+    const tbSemi = document.getElementById("table-seminovos")?.getElementsByTagName("tbody")[0];
+    if (tbSemi) {
+      tbSemi.innerHTML = fitSemi.length === 0 ? `<tr><td colspan="7" style="text-align:center; color:#64748b; padding:20px;">Aguardando a importação de uma planilha Excel real...</td></tr>` : "";
+      fitSemi.forEach(i => {
+        let tr = document.createElement("tr");
+        let indL = limparMoeda(i.emitido) > 0 ? (((limparMoeda(i.emitido) - limparMoeda(i.recebido)) / limparMoeda(i.emitido)) * 100).toFixed(1) : "0.0";
+        tr.innerHTML = `<td>${(i.master || 'Geral').toUpperCase()}</td><td>${(i.mes_formatado || '').toUpperCase()}</td><td>${parseInt(i['boletos recebidos']||0,10)} un</td><td>R$ ${limparMoeda(i.faturamento).toLocaleString("pt-BR", {minimumFractionDigits:2})}</td><td>R$ ${limparMoeda(i.emitido).toLocaleString("pt-BR", {minimumFractionDigits:2})}</td><td>R$ ${(limparMoeda(i.emitido)*0.35).toLocaleString("pt-BR", {minimumFractionDigits:2})}</td><td class="red">${indL}%</td>`;
+        tbSemi.appendChild(tr);
+      });
+    }
+    // --- CÁLCULOS ABA 3: EXPANSÃO (FRANQUIAS E MOTOS) ---
+    let fitExp = dadosDashboardGlobais;
+    if (pExp !== "Todos") fitExp = fitExp.filter(i => i.mes_formatado === pExp);
+    if (uExp !== "Todos") fitExp = fitExp.filter(i => (i.master || i.unidade) === uExp);
+    let efBruto = 0;
+    let efPagas = 0;
+    let emBruto = 0;
+    let emPagas = 0;
+    fitExp.forEach(i => {
+      let tx = (i.taxa || "").toString().toUpperCase();
+      if (tx.includes("ROYALTIES") || tx.includes("SPLIT")) {
+        efBruto += limparMoeda(i.emitido);
+        efPagas += limparMoeda(i.recebido);
+      } else {
+        emBruto += limparMoeda(i.emitido);
+        emPagas += limparMoeda(i.recebido);
+      }
+    });
+    let efAberto = efBruto - efPagas;
+    let efInad = efBruto > 0 ? (efAberto / efBruto) * 100 : 0;
+    let emAberto = emBruto - emPagas;
+    let emInad = emBruto > 0 ? (emAberto / emBruto) * 100 : 0;
+    txtId("exp-fran-bruto", "R$ " + efBruto.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("exp-fran-pagas", "R$ " + efPagas.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("exp-fran-aberto", "R$ " + (efAberto > 0 ? efAberto : 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("exp-fran-inad", (efInad > 0 ? efInad.toFixed(1) : "0.0") + " %");
+    txtId("exp-motos-bruto", "R$ " + emBruto.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("exp-motos-pagas", "R$ " + emPagas.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("exp-motos-aberto", "R$ " + (emAberto > 0 ? emAberto : 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("exp-motos-inad", (emInad > 0 ? emInad.toFixed(1) : "0.0") + " %");
+    const tbExp = document.getElementById("table-expansao")?.getElementsByTagName("tbody")[0];
+    if (tbExp) {
+      tbExp.innerHTML = fitExp.length === 0 ? `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">Aguardando a importação de uma planilha Excel real...</td></tr>` : "";
+      fitExp.forEach(i => {
+        let tr = document.createElement("tr");
+        let ind = limparMoeda(i.emitido) > 0 ? (((limparMoeda(i.emitido) - limparMoeda(i.recebido)) / limparMoeda(i.emitido)) * 100).toFixed(1) : "0.0";
+        tr.innerHTML = `<td><strong>${(i.master || 'Unidade').toUpperCase()}</strong></td><td><span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:10px; font-size:10px;">Ativo</span></td><td>${parseInt(i['boletos emitidos']||0,10)}</td><td>${parseInt(i['boletos recebidos']||0,10)}</td><td class="green">R$ ${limparMoeda(i.recebido).toLocaleString("pt-BR")}</td><td class="red">${ind}%</td>`;
+        tbExp.appendChild(tr);
+      });
+    }
+    // --- ATUALIZAÇÃO DO BANNER CONSOLIDADO SUPERIOR TOTAL ---
+    txtId("kpi-fat-geral", "R$ " + gFaturamento.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("kpi-bruto-conso", "R$ " + gEmitido.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    txtId("kpi-liq-conso", "R$ " + gRecebido.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2
+    }));
+    let iGeral = gEmitido > 0 ? ((gEmitido - gRecebido) / gEmitido) * 100 : 0;
+    txtId("kpi-inad-geral", (iGeral > 0 ? iGeral.toFixed(2) : "0.00") + " %");
+    if (document.getElementById("kpi-subtext-liq")) {
+      document.getElementById("kpi-subtext-liq").textContent = gEmitido > 0 ? `${((gRecebido / gEmitido) * 100).toFixed(0)}% do bruto` : "0% do bruto";
+    }
+    // --- RECONSTRUÇÃO CRONOLÓGICA DE GRÁFICOS ---
+    let mesesMotos = Object.keys(evolucaoMensalTaxas).sort();
+    let valoresMotos = mesesMotos.map(m => evolucaoMensalTaxas[m]);
+    gerarEstruturaGraficos(mEmitido, mRecebido, mAberto, mesesMotos, valoresMotos, sRecebidos, sFuturas, sVencidos, efPagas, efAberto, emPagas, emAberto);
+  }
+  // --- CONSTRUTOR CHART.JS COORDENADO PELOS MEUS CÓDIGOS ---
+  function gerarEstruturaGraficos(mEmit, mRec, mAberto, mesesMotos, valoresMotos, sRec, sFut, sVen, efPagas, efAb, emPagas, emAb) {
+    const matar = (g) => {
+      if (g) g.destroy();
+    };
+    matar(graficoFluxoMotos);
+    matar(graficoTaxasMotos);
+    matar(graficoSemiVendas);
+    matar(graficoSemiCarteira);
+    matar(graficoSemiRisco);
+    matar(graficoExpFranquias);
+    matar(graficoExpMotos);
+    const configuracaoRosca = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            boxWidth: 10,
+            font: {
+              size: 9
+            }
+          }
+        }
+      }
+    };
+    // 1. Fluxo de Caixa Motos (Rosca)
+    if (document.getElementById("chart-motos-fluxo")) {
+      graficoFluxoMotos = new Chart(document.getElementById("chart-motos-fluxo"), {
+        type: 'doughnut',
+        data: {
+          labels: ['Recebido', 'Aberto'],
+          datasets: [{
+            data: [mRec, mAberto > 0 ? mAberto : 0],
+            backgroundColor: ['#16a34a', '#ef4444']
+          }]
+        },
+        options: configuracaoRosca
+      });
+    }
+    // 2. EVOLUÇÃO MÊS A MÊS CONFORME A TAXA (Gráfico de Linha Dinâmico)
+    if (document.getElementById("chart-motos-taxas")) {
+      graficoTaxasMotos = new Chart(document.getElementById("chart-motos-taxas"), {
+        type: 'line',
+        data: {
+          labels: mesesMotos.length > 0 ? mesesMotos : ['Sem dados'],
+          datasets: [{
+            label: 'Evolução Receita Líquida',
+            data: valoresMotos.length > 0 ? valoresMotos : [0],
+            borderColor: '#1e3a8a',
+            backgroundColor: 'rgba(30, 58, 138, 0.05)',
+            fill: true,
+            tension: 0.2,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              display: true
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+    // 3. Gráficos da Aba 2 (Seminovos)
+    if (document.getElementById("chart-semi-vendas")) {
+      graficoSemiVendas = new Chart(document.getElementById("chart-semi-vendas"), {
+        type: 'bar',
+        data: {
+          labels: ['Recebido Realizado'],
+          datasets: [{
+            data: [sRec],
+            backgroundColor: ['#16a34a']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+    if (document.getElementById("chart-semi-carteira")) {
+      graficoSemiCarteira = new Chart(document.getElementById("chart-semi-carteira"), {
+        type: 'line',
+        data: {
+          labels: ['Carteira Futura'],
+          datasets: [{
+            data: [sFut],
+            borderColor: '#2563eb',
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+    if (document.getElementById("chart-semi-risco")) {
+      graficoSemiRisco = new Chart(document.getElementById("chart-semi-risco"), {
+        type: 'doughnut',
+        data: {
+          labels: ['Ok', 'Vencido'],
+          datasets: [{
+            data: [sRec, sVen],
+            backgroundColor: ['#16a34a', '#ef4444']
+          }]
+        },
+        options: configuracaoRosca
+      });
+    }
+    // 4. Gráficos da Aba 3 (Expansão)
+    if (document.getElementById("chart-exp-franquias")) {
+      graficoExpFranquias = new Chart(document.getElementById("chart-exp-franquias"), {
+        type: 'doughnut',
+        data: {
+          labels: ['Pagas', 'Aberto'],
+          datasets: [{
+            data: [efPagas, efAb],
+            backgroundColor: ['#8b5cf6', '#ef4444']
+          }]
+        },
+        options: configuracaoRosca
+      });
+    }
+    if (document.getElementById("chart-exp-motos")) {
+      graficoExpMotos = new Chart(document.getElementById("chart-exp-motos"), {
+        type: 'doughnut',
+        data: {
+          labels: ['Pagas', 'Aberto'],
+          datasets: [{
+            data: [emPagas, emAb],
+            backgroundColor: ['#ec4899', '#ef4444']
+          }]
+        },
+        options: configuracaoRosca
+      });
+    }
+  }
+  // --- EXPORTADOR XLS NATIVO DO EXCEL ---
+  function exportTableToCSV(tableID, filename = '') {
+    const table = document.getElementById(tableID);
+    if (!table) return;
+    let txtOutput = [];
+    const rows = table.querySelectorAll("tr");
+    for (let i = 0; i < rows.length; i++) {
+      let row = [],
+        cols = rows[i].querySelectorAll("td, th");
+      for (let j = 0; j < cols.length; j++) row.push(cols[j].innerText.replace(/"/g, '""').trim());
+      txtOutput.push(row.join("\t"));
+    }
+    const blob = new Blob(["\ufeff" + txtOutput.join("\n")], {
+      type: 'application/vnd.ms-excel;charset=utf-8'
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", (filename ? filename : 'relatorio') + '.xls');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+</script>
+    <script  src="./script.js"></script>
+
+  </body>
+  
+</html>
